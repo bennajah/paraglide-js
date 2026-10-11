@@ -14,6 +14,11 @@ import {
 import { nodeNormalizePath } from "../utilities/node-normalize-path.js";
 import { seedPreviousCompilationFromOutdir } from "../compiler/seed-previous-compilation.js";
 import {
+	extractTCalls,
+	isExtractablePath,
+	type ExtractTCallsResult,
+} from "../services/extract-t-calls.js";
+import {
 	CONFIG_FILE_NAMES,
 	clearParaglideConfigCache,
 	isConfigFileName,
@@ -451,6 +456,39 @@ async function compileAndUpdateState(args: {
 }
 
 /**
+ * Runs `t("...")` message extraction before compilation (dev server start,
+ * rebuilds, and builds). Best-effort: extraction must never fail the build.
+ */
+async function runTExtraction(
+	compilerOptions: CompilerOptions,
+	files?: string[]
+): Promise<ExtractTCallsResult> {
+	try {
+		const result = await extractTCalls({
+			projectDir: resolve(process.cwd(), compilerOptions.project),
+			files,
+		});
+		if (result.added > 0) {
+			logger.info(
+				`[paraglide-t] extracted ${result.added} missing message${result.added === 1 ? "" : "s"} (${result.scanned} file${result.scanned === 1 ? "" : "s"} scanned)`
+			);
+		}
+		return result;
+	} catch (error) {
+		logger.warn(
+			`[paraglide-t] message extraction skipped (${(error as Error)?.message ?? String(error)})`
+		);
+		return { added: 0, dirty: false, scanned: 0, skippedDynamic: 0 };
+	}
+}
+
+function resolveTExtractSrcDir(compilerOptions: CompilerOptions): string {
+	return nodeNormalizePath(
+		join(dirname(resolve(process.cwd(), compilerOptions.project)), "src")
+	);
+}
+
+/**
  * Runs the compilation with the given, already-resolved options. Shared by
  * buildStart and watch-mode rebuilds.
  */
@@ -466,6 +504,9 @@ async function runCompilation(args: {
 		// Stabilize project directory listings before the first digest. The
 		// ignored cache directory must not invalidate the cache that creates it.
 		await preparePersistentCacheDirectory(compilerOptions, outputStructure);
+		// Extract t("...") messages from source files first so newly written
+		// strings are part of this compilation's inputs.
+		await runTExtraction(compilerOptions);
 		if (
 			state.previousCompilation === undefined &&
 			(await restorePersistentCache({
@@ -631,9 +672,17 @@ export const unpluginFactory: UnpluginFactoryWithOptions = (userArgs) => {
 		let args: CompilerOptions;
 		if (!configEvent && lastOptions !== undefined) {
 			args = lastOptions;
+			// New t("...") strings in source files are extracted on save.
+			// Only the changed file is scanned; a recompile follows when the
+			// extraction added missing catalog entries.
+			let extractionDirty = false;
+			if (isExtractablePath(normalizedPath, resolveTExtractSrcDir(args))) {
+				extractionDirty = (await runTExtraction(args, [normalizedPath])).dirty;
+			}
 			const targets = getWatchTargets(readFiles, { outdir: args.outdir });
-			if (targets.isIgnoredPath(normalizedPath)) return;
+			if (targets.isIgnoredPath(normalizedPath) && !extractionDirty) return;
 			const shouldCompile =
+				extractionDirty ||
 				targets.files.has(normalizedPath) ||
 				isPathWithinDirectories(normalizedPath, targets.directories);
 			if (!shouldCompile) return;
@@ -669,14 +718,14 @@ export const unpluginFactory: UnpluginFactoryWithOptions = (userArgs) => {
 			}
 
 			clearReadFiles();
-			await compileAndUpdateState({
+		await compileAndUpdateState({
 				state,
 				compilerOptions: args,
 				outputStructure,
 				previousCompilation: state.previousCompilation,
 				isServer,
 			});
-			await writePersistentCache(state, args, outputStructure);
+		await writePersistentCache(state, args, outputStructure);
 			logger.success(`Re-compilation complete (${outputStructure})`);
 
 			const nextTargets = getWatchTargets(readFiles, { outdir: args.outdir });
@@ -723,6 +772,9 @@ export const unpluginFactory: UnpluginFactoryWithOptions = (userArgs) => {
 						safeAddWatchFile(this, filePath);
 					for (const directoryPath of targets.directories)
 						safeAddWatchFile(this, directoryPath);
+					// Watch the source tree so new t("...") calls are
+					// extracted (and re-compiled) when source files change.
+					safeAddWatchFile(this, resolveTExtractSrcDir(lastOptions));
 				}
 				// Register every config candidate inside the project directory
 				// so renames and format switches are reported even by backends
@@ -792,8 +844,8 @@ export const unpluginFactory: UnpluginFactoryWithOptions = (userArgs) => {
 					lastOptions = args;
 				} catch (error) {
 					state.previousInputsDigest = undefined;
-					state.previousCompilation = undefined;
-					logger.error(
+				state.previousCompilation = undefined;
+				logger.error(
 						"Failed to load paraglide config:",
 						(error as Error).message
 					);
@@ -883,7 +935,7 @@ export const unpluginFactory: UnpluginFactoryWithOptions = (userArgs) => {
 					logger.error(
 						"Failed to load paraglide config:",
 						(error as Error).message
-					);
+						);
 					if (process.env.NODE_ENV === "production") throw error;
 					return;
 				}
@@ -897,7 +949,7 @@ export const unpluginFactory: UnpluginFactoryWithOptions = (userArgs) => {
 							state,
 							compilerOptions: args,
 							outputStructure,
-						}))
+							}))
 					) {
 						logger.info(
 							`Compilation skipped — inputs unchanged (${outputStructure})`
