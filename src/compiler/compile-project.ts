@@ -10,6 +10,7 @@ import {
 import { createRuntimeFile } from "./runtime/create-runtime.js";
 import { createServerFile } from "./server/create-server-file.js";
 import { createRegistry } from "./registry.js";
+import { createTFunctionFile } from "./t-function.js";
 import { emitTsDeclarations } from "./emit-ts-declarations.js";
 import { createReadme } from "./create-readme.js";
 import { perLocaleBuildStaticLocaleExpression } from "./per-locale-build.js";
@@ -77,7 +78,10 @@ export const compileProject = async (args: {
 			"export * from './messages/_index.js'",
 			"// enabling auto-import by exposing all messages as m",
 			"export * as m from './messages/_index.js'",
+			"// dynamic lookup by id or inline source text (see t.js)",
+			"export { t } from './t.js'",
 		].join("\n"),
+		["t.js"]: createTFunctionFile(),
 	};
 
 	// generate the output modules
