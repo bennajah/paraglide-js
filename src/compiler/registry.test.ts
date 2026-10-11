@@ -1,4 +1,5 @@
 import { afterEach, expect, test, vi } from "vitest";
+import { execFileSync } from "node:child_process";
 import { compileMessage } from "./compile-message.js";
 import {
 	createRegistry,
@@ -18,13 +19,17 @@ function spyConstructor(
 }
 
 async function loadRegistry(inline = false) {
-	const source = inline
-		? `export const registry = (() => { ${Object.values(registryFunctionCode(withRegistryDependencies(["plural", "icuPound", "datetime", "relativetime"]))).join("\n")}\nreturn { plural, icuPound, number, datetime, relativetime }; })();`
-		: createRegistry();
+	const source = registrySource(inline);
 	const module = await import(
 		`data:text/javascript;base64,${Buffer.from(source).toString("base64")}`
 	);
 	return inline ? module.registry : module;
+}
+
+function registrySource(inline: boolean) {
+	return inline
+		? `export const registry = (() => { ${Object.values(registryFunctionCode(withRegistryDependencies(["plural", "icuPound", "datetime", "relativetime"]))).join("\n")}\nreturn { plural, icuPound, number, datetime, relativetime }; })();`
+		: createRegistry();
 }
 
 for (const inline of [false, true]) {
@@ -56,6 +61,50 @@ for (const inline of [false, true]) {
 			spy.mockRestore();
 		}
 		expect(registry.icuPound("en", 3, { offset: 1 })).toBe("2");
+	});
+
+	test(`default-zone datetime follows host TZ changes; explicit zones stay cached (inline=${inline})`, () => {
+		// TZ changes affect Intl in Node's main thread, not Vitest worker threads.
+		const url = `data:text/javascript;base64,${Buffer.from(registrySource(inline)).toString("base64")}`;
+		execFileSync(
+			process.execPath,
+			[
+				"--input-type=module",
+				"-e",
+				`
+			import assert from "node:assert/strict";
+			const module = await import(${JSON.stringify(url)});
+			const registry = ${inline ? "module.registry" : "module"};
+			const Native = Intl.DateTimeFormat;
+			let constructions = 0;
+			Intl.DateTimeFormat = new Proxy(Native, {
+				construct(target, args, newTarget) {
+					constructions++;
+					return Reflect.construct(target, args, newTarget);
+				}
+			});
+			const input = "2026-01-01T02:00:00Z";
+			for (const options of [undefined, {}, { timeZone: undefined }, { hour: "numeric" }]) {
+				const start = constructions;
+				process.env.TZ = "UTC";
+				const utc = registry.datetime("en", input, options, true);
+				assert.equal(utc, new Native("en", options).format(new Date(input)));
+				process.env.TZ = "America/New_York";
+				const newYork = registry.datetime("en", input, options, true);
+				assert.equal(newYork, new Native("en", options).format(new Date(input)));
+				assert.notEqual(utc, newYork);
+				assert.equal(constructions - start, 2);
+			}
+			const start = constructions;
+			process.env.TZ = "UTC";
+			const utc = registry.datetime("en", input, { timeZone: "UTC" }, true);
+			process.env.TZ = "America/New_York";
+			assert.equal(registry.datetime("en", input, { timeZone: "UTC" }, true), utc);
+			assert.equal(constructions - start, 1);
+		`,
+			],
+			{ env: { ...process.env, TZ: "UTC" }, timeout: 10000 }
+		);
 	});
 }
 

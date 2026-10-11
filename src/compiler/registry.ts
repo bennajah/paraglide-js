@@ -129,7 +129,11 @@ const registryFunctions: Record<string, RegistryFunction> = {
  * @returns {string}
  */`,
 		code: `function datetime(locale, input, options, cacheable = false) {
-	return getIntlFormatter(Intl.DateTimeFormat, locale, options, cacheable).format(new Date(/** @type {string} */ (input)))
+	// The host default zone can change while the app is running.
+	const formatter = cacheable && options?.timeZone !== undefined
+		? getIntlFormatter(Intl.DateTimeFormat, locale, options, cacheable)
+		: new Intl.DateTimeFormat(locale, options);
+	return formatter.format(new Date(/** @type {string} */ (input)))
 };`,
 		dependencies: ["getIntlFormatter"],
 	},

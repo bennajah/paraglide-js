@@ -71,6 +71,10 @@ const cases = [
 			}),
 	],
 	[
+		"datetime default zone (uncached)",
+		(r, i) => r.datetime("en", 1700000000000 + i, { dateStyle: "short" }),
+	],
+	[
 		"relativetime",
 		(r, i) => r.relativetime("en", i % 20, { unit: "day", numeric: "auto" }),
 	],
