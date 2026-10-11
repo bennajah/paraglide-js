@@ -83,7 +83,7 @@ test("compiles a local variable with an annotation and empty options", () => {
 			},
 		},
 	});
-	expect(code).toEqual('const myVar = registry.number("en", "Hello", {});');
+	expect(code).toEqual('const myVar = registry.number("en", "Hello", {}, true);');
 });
 
 test("interpolates the raw value for an unknown annotation, like a pattern", () => {
@@ -132,7 +132,7 @@ test("compiles a local variable with an annotation and options", () => {
 		},
 	});
 	expect(code).toEqual(
-		'const myVar = registry.number("en", "Hello", { option1: "value1", option2: i?.varRef });'
+		'const myVar = registry.number("en", "Hello", { option1: "value1", option2: i?.varRef }, true);'
 	);
 });
 
@@ -168,7 +168,7 @@ test("compiles formatter options referencing earlier local variables", () => {
 	});
 
 	expect(code).toEqual(
-		'const formattedAmount = registry.number("en", i?.amount, { minimumFractionDigits: digits });'
+		'const formattedAmount = registry.number("en", i?.amount, { minimumFractionDigits: digits }, true);'
 	);
 });
 
@@ -200,7 +200,7 @@ test("compiles number formatter fraction digit options as numeric literals", () 
 	});
 
 	expect(code).toEqual(
-		'const formattedValue = registry.number("en", i?.value, { minimumFractionDigits: 1, maximumFractionDigits: 1 });'
+		'const formattedValue = registry.number("en", i?.value, { minimumFractionDigits: 1, maximumFractionDigits: 1 }, true);'
 	);
 });
 
@@ -228,7 +228,7 @@ test("compiles number formatter useGrouping option as boolean literal", () => {
 	});
 
 	expect(code).toEqual(
-		'const formattedValue = registry.number("en", i?.value, { useGrouping: false });'
+		'const formattedValue = registry.number("en", i?.value, { useGrouping: false }, true);'
 	);
 });
 
@@ -256,7 +256,7 @@ test("keeps negative digit options as strings to avoid emitting invalid numeric 
 	});
 
 	expect(code).toEqual(
-		'const formattedValue = registry.number("en", i?.value, { minimumFractionDigits: "-1" });'
+		'const formattedValue = registry.number("en", i?.value, { minimumFractionDigits: "-1" }, true);'
 	);
 });
 
@@ -283,7 +283,7 @@ test("compiles relative time formatter with a literal unit", () => {
 	});
 
 	expect(code).toEqual(
-		'const formattedDuration = registry.relativetime("en", i?.duration, { unit: "day", numeric: "auto", style: "short" });'
+		'const formattedDuration = registry.relativetime("en", i?.duration, { unit: "day", numeric: "auto", style: "short" }, true);'
 	);
 });
 
@@ -312,7 +312,7 @@ test("compiles relative time formatter with a dynamic unit cast", () => {
 	});
 
 	expect(code).toEqual(
-		'const formattedDuration = registry.relativetime("en", i?.duration, { unit: /** @type {import("../registry.js").RelativeTimeFormatUnit} */ (i?.unit), style: "short" });'
+		'const formattedDuration = registry.relativetime("en", i?.duration, { unit: /** @type {import("../registry.js").RelativeTimeFormatUnit} */ (i?.unit), style: "short" }, true);'
 	);
 });
 
@@ -405,7 +405,7 @@ test("accepts plural relative time formatter units", () => {
 	});
 
 	expect(code).toEqual(
-		'const formattedDuration = registry.relativetime("en", i?.duration, { unit: "days" });'
+		'const formattedDuration = registry.relativetime("en", i?.duration, { unit: "days" }, true);'
 	);
 });
 
@@ -433,7 +433,7 @@ test("accepts dynamic relative time formatter units", () => {
 	});
 
 	expect(code).toEqual(
-		'const formattedDuration = registry.relativetime("en", i?.duration, { unit: /** @type {import("../registry.js").RelativeTimeFormatUnit} */ (i?.unit) });'
+		'const formattedDuration = registry.relativetime("en", i?.duration, { unit: /** @type {import("../registry.js").RelativeTimeFormatUnit} */ (i?.unit) }, true);'
 	);
 });
 
@@ -458,7 +458,7 @@ test("accepts dollar-prefixed relative time formatter unit options from message 
 	});
 
 	expect(code).toEqual(
-		'const formattedDuration = registry.relativetime("en", i?.duration, { unit: /** @type {import("../registry.js").RelativeTimeFormatUnit} */ (i?.unit) });'
+		'const formattedDuration = registry.relativetime("en", i?.duration, { unit: /** @type {import("../registry.js").RelativeTimeFormatUnit} */ (i?.unit) }, true);'
 	);
 });
 
@@ -491,7 +491,7 @@ test("compiles dollar-prefixed relative time units referencing local variables",
 	});
 
 	expect(code).toEqual(
-		'const formattedDuration = registry.relativetime("en", i?.duration, { unit: /** @type {import("../registry.js").RelativeTimeFormatUnit} */ (localUnit) });'
+		'const formattedDuration = registry.relativetime("en", i?.duration, { unit: /** @type {import("../registry.js").RelativeTimeFormatUnit} */ (localUnit) }, true);'
 	);
 });
 
@@ -519,7 +519,7 @@ test("accepts dollar-prefixed relative time formatter unit options with non-iden
 	});
 
 	expect(code).toEqual(
-		'const formattedDuration = registry.relativetime("en", i?.duration, { unit: /** @type {import("../registry.js").RelativeTimeFormatUnit} */ (i?.["relative-unit"]) });'
+		'const formattedDuration = registry.relativetime("en", i?.duration, { unit: /** @type {import("../registry.js").RelativeTimeFormatUnit} */ (i?.["relative-unit"]) }, true);'
 	);
 });
 
@@ -541,6 +541,6 @@ test.each([
 		},
 	});
 	expect(code).toBe(
-		`const formatted = registry.datetime("en", i?.d, ${options});`
+		`const formatted = registry.datetime("en", i?.d, ${options}, true);`
 	);
 });

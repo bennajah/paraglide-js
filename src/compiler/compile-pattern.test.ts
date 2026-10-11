@@ -143,7 +143,7 @@ test("compiles a pattern expression annotation to a registry call", () => {
 		locale: "en",
 	});
 
-	expect(code).toBe('`${registry.number("en", i?.count, {})} views`');
+	expect(code).toBe('`${registry.number("en", i?.count, {}, true)} views`');
 });
 
 test("compiles pattern expression annotation options like local variable annotations", () => {
@@ -172,7 +172,7 @@ test("compiles pattern expression annotation options like local variable annotat
 	});
 
 	expect(code).toBe(
-		'`${registry.number("de", i?.price, { minimumFractionDigits: 2, style: "percent" })}`'
+		'`${registry.number("de", i?.price, { minimumFractionDigits: 2, style: "percent" }, true)}`'
 	);
 });
 
@@ -208,7 +208,7 @@ test("compiles pattern annotation options that reference local variables", () =>
 	});
 
 	expect(code).toBe(
-		'`${registry.number("en", i?.price, { minimumFractionDigits: digits })}`'
+		'`${registry.number("en", i?.price, { minimumFractionDigits: digits }, true)}`'
 	);
 });
 
@@ -230,7 +230,7 @@ test("parts mode compiles pattern expression annotations to registry calls", () 
 	});
 
 	expect(code).toBe(
-		'[{ type: "text", value: String(registry.number("en", i?.count, {})) }, { type: "text", value: " views" }]'
+		'[{ type: "text", value: String(registry.number("en", i?.count, {}, true)) }, { type: "text", value: " views" }]'
 	);
 });
 
@@ -534,5 +534,5 @@ test("a style from a variable replaces the default date style", () => {
 		],
 		locale: "en",
 	});
-	expect(code).toBe('`${registry.datetime("en", i?.d, { dateStyle: i?.s })}`');
+	expect(code).toBe('`${registry.datetime("en", i?.d, { dateStyle: i?.s }, true)}`');
 });
