@@ -708,7 +708,7 @@ export const unpluginFactory: UnpluginFactoryWithOptions = (userArgs) => {
 
 		maybeInvalidateForOptionsChange(state, args);
 		const outputStructure = resolveOutputStructure(args);
-		const previousReadFiles = new Set(readFiles);
+		const previouslyReadFiles = new Set(readFiles);
 
 		try {
 			if (!configEvent) {
@@ -735,7 +735,7 @@ export const unpluginFactory: UnpluginFactoryWithOptions = (userArgs) => {
 				safeAddWatchFile(undefined, directoryPath);
 		} catch (e) {
 			clearReadFiles();
-			for (const filePath of previousReadFiles) readFiles.add(filePath);
+			for (const filePath of previouslyReadFiles) readFiles.add(filePath);
 			state.previousCompilation = undefined;
 			state.previousInputsDigest = undefined;
 			logger.warn("Failed to re-compile project:", (e as Error).message);
@@ -840,8 +840,8 @@ export const unpluginFactory: UnpluginFactoryWithOptions = (userArgs) => {
 				let args: CompilerOptions;
 				try {
 					const loaded = await loadActiveConfig();
-					args = resolveOptionsWith(loaded);
-					lastOptions = args;
+				args = resolveOptionsWith(loaded);
+				lastOptions = args;
 				} catch (error) {
 					state.previousInputsDigest = undefined;
 					state.previousCompilation = undefined;
@@ -949,7 +949,7 @@ export const unpluginFactory: UnpluginFactoryWithOptions = (userArgs) => {
 							state,
 							compilerOptions: args,
 							outputStructure,
-							}))
+						}))
 					) {
 						logger.info(
 							`Compilation skipped — inputs unchanged (${outputStructure})`
