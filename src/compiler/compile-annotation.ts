@@ -107,7 +107,13 @@ export function compileAnnotation(
 	).options;
 	// the options of `date` and `time` are those of `datetime`
 	const optionsOf = functionName === "datetime" ? "datetime" : annotation.name;
-	return `registry.${functionName}("${locale}", ${str}, ${compileOptions(optionsOf, options, declarations)})`;
+	// compileOptions emits a plain data object, so the registry can safely cache it.
+	const cacheable =
+		["plural", "number", "datetime", "relativetime"].includes(functionName) &&
+		!options.some((option) => option.name === "__proto__")
+			? ", true"
+			: "";
+	return `registry.${functionName}("${locale}", ${str}, ${compileOptions(optionsOf, options, declarations)}${cacheable})`;
 }
 
 const icuDateTimeStyles = new Set(["short", "medium", "long", "full"]);

@@ -696,7 +696,7 @@ describe("ICU plural offset (`{count, plural, offset:1 …}`)", () => {
 		});
 
 		// a number, not the string "1"
-		expect(code).toContain('registry.plural("en", i?.count, { offset: 1 })');
+		expect(code).toContain('registry.plural("en", i?.count, { offset: 1 }, true)');
 		expect(render(message, [0, 1, 2, 3, 22, "1", "2"])).toEqual({
 			"0": "Nobody",
 			"1": "Only you",
