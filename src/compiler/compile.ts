@@ -2,6 +2,7 @@ import { loadProjectFromDirectory } from "@inlang/sdk";
 import path from "node:path";
 import { compileProject } from "./compile-project.js";
 import { writeOutput } from "../services/file-handling/write-output.js";
+import { extractTCalls } from "../services/extract-t-calls.js";
 import {
 	defaultCompilerOptions,
 	type CompilerOptions,
@@ -59,6 +60,18 @@ export async function compile(
 				path: withDefaultOptions.project,
 				fs,
 			});
+
+			// Extract t("...") messages from source files first so the
+			// compilation below includes them. Best-effort: extraction
+			// must never fail the compile (e.g. `paraglide-js compile`
+			// in CI without a source tree).
+			try {
+				await extractTCalls({
+					projectDir: path.resolve(process.cwd(), withDefaultOptions.project),
+				});
+			} catch {
+				// ignore extraction errors, compile with existing catalogs
+			}
 
 			const output = await compileProject({
 				compilerOptions: withDefaultOptions,
