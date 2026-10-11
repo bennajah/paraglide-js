@@ -1,5 +1,13 @@
 # @inlang/paraglide-js
 
+## 2.27.1
+
+### Patch Changes
+
+- bfdaecf: Cache Intl formatters used by compiled messages instead of constructing them on every call. Bound each formatter cache to 256 locale/options configurations, preserve direct-call option semantics, and include caching in middleware-injected messages.
+
+  Date/time formatters are cached only with an explicit time zone, so messages using the host default follow device or process time zone changes.
+
 ## 2.27.0
 
 ### Minor Changes
